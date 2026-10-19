@@ -474,8 +474,8 @@ function doShoot(p,power){
   let tz=aimZ;
   if(p.team.human){ const ix=inputDir(); if(Math.abs(ix.z)>.3) tz=Math.sign(ix.z)*(GOAL_W/2-.5)*(p.team.dir); tz=Math.max(-3.4,Math.min(3.4,tz + (Math.random()-.5)*1.2)); }
   const dir=V(gx-p.pos.x,tz-p.pos.z);
-  const dist=dir.length(), pw=16+power*16;
-  const lift=1.5+power*5+dist*.06 - (power>.9?0:0);
+  const dist=dir.length(), pw=27+power*17;
+  const lift=1+power*3.5+dist*.05;
   p.team.shots++;
   kick(p,dir,pw,lift,(Math.random()-.5)*2);
   if(p.team.human) feed(`${p.name} shoots!`);
@@ -578,7 +578,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="2.0";
+const VERSION="2.1";
 // ---------- language ----------
 let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
 const PAIRS=[ // [Korean, English]
@@ -641,7 +641,7 @@ const PANELS={
   team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
-  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v2.0 메뉴가 전체 화면 페이지로 바뀜, 선수 카드 디자인<br>• v1.9 메인 메뉴 전부 작동 — 클럽하우스, 훈련 센터, 선수 등록, 도전 과제, 라커룸, 이적시장, 관전, 아이템<br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v2.0 Menus open as full pages, player card design<br>• v1.9 Every main menu works — Clubhouse, Training, Register, Challenges, Locker Room, Transfers, Spectate, Items<br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v2.1 슛이 훨씬 세게<br>• v2.0 메뉴가 전체 화면 페이지로 바뀜, 선수 카드 디자인<br>• v1.9 메인 메뉴 전부 작동 — 클럽하우스, 훈련 센터, 선수 등록, 도전 과제, 라커룸, 이적시장, 관전, 아이템<br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v2.1 Much stronger shots<br>• v2.0 Menus open as full pages, player card design<br>• v1.9 Every main menu works — Clubhouse, Training, Register, Challenges, Locker Room, Transfers, Spectate, Items<br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
   notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
   shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
