@@ -72,6 +72,7 @@
   <div id="topbar">
     <div class="logo">FC<b>3D</b></div>
     <nav><a data-p="club">구단 관리</a><a data-p="house">클럽하우스</a><a data-p="team">팀 관리</a><a data-p="tactic">팀 전술</a><a data-p="train">훈련 센터</a></nav>
+    <a id="upd" data-p="update" style="background:#19e68c;color:#04210f;padding:6px 12px;border-radius:4px;white-space:nowrap">🔄 업데이트</a>
     <div class="cur"><span>LV <b id="lv">1</b></span><span>🏆 <b id="trophy">0</b></span><span>💰 <b id="coins">0</b> BP</span></div>
   </div>
   <div id="modes">
@@ -511,6 +512,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
+const VERSION="1.2";
 const PROF={lv:1,xp:0,trophy:0,coins:5000,w:0,d:0,l:0};
 try{ Object.assign(PROF,JSON.parse(localStorage.getItem("fc3d")||"{}")); }catch(e){}
 function saveProf(){ try{localStorage.setItem("fc3d",JSON.stringify(PROF));}catch(e){} }
@@ -530,6 +532,7 @@ const PANELS={
   team:()=>["팀 관리",`<label>내 팀</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>["팀 전술",`<label>포메이션</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>전술</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>["게임 가이드",document.querySelector(".keys").innerHTML],
+  update:()=>["업데이트",`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시<br><br><button class="go" onclick="location.reload()">최신 버전으로 업데이트</button>`],
   notice:()=>["공지사항","• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비"],
   shop:()=>["상점",`보유 BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">선수팩 구매 (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
