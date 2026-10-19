@@ -81,6 +81,7 @@
     <div class="logo">FC<b>3D</b></div>
     <nav><a data-p="club">구단 관리</a><a data-p="house">클럽하우스</a><a data-p="team">팀 관리</a><a data-p="tactic">팀 전술</a><a data-p="train">훈련 센터</a></nav>
     <a id="upd" data-p="update" style="background:#19e68c;color:#04210f;padding:6px 12px;border-radius:4px;white-space:nowrap">🔄 업데이트</a>
+    <select id="lang" style="width:auto;padding:5px 8px;font-size:13px"><option value="ko">🇰🇷 한국어</option><option value="en">🇺🇸 English</option></select>
     <div class="cur"><span>LV <b id="lv">1</b></span><span>🏆 <b id="trophy">0</b></span><span>💰 <b id="coins">0</b> BP</span></div>
   </div>
   <div id="modes">
@@ -545,7 +546,44 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="1.4";
+const VERSION="1.5";
+// ---------- language ----------
+let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
+const PAIRS=[ // [Korean, English]
+ ["구단 관리","Club"],["클럽하우스","Clubhouse"],["팀 관리","Team"],["팀 전술","Tactics"],["훈련 센터","Training"],["🔄 업데이트","🔄 Update"],
+ ["공식 경기 1vs1","Ranked 1vs1"],["공식 경기 2vs2","Ranked 2vs2"],["공식 경기 감독 모드","Ranked Manager Mode"],["아레나","Arena"],["멀티 스쿼드 리그","Multi Squad League"],
+ ["스페셜 매치","Special Match"],["스쿼드배틀","Squad Battle"],["볼타 라이브","Volta Live"],["공지사항","Notice"],["새소식을 알립니다.","Latest news."],
+ ["게임 가이드","Game Guide"],["조작법 & 기능 안내","Controls & features"],["PREMIUM 코인 상점","PREMIUM Coin Shop"],["선수팩 획득 가능!","Get player packs!"],
+ ["선수 등록","Register"],["도전 과제","Challenges"],["라커룸","Locker Room"],["이적시장","Transfer Market"],["관전","Spectate"],["아이템","Items"],["상점","Shop"],["닫기","Close"],
+ ["경기 설정 — 팀, 포메이션, 전술, 난이도를 선택하세요.","Match setup — choose team, formation, tactic and difficulty."],
+ ["내 팀","Your team"],["상대 팀","Opponent"],["포메이션","Formation"],["전술","Tactic"],["난이도","Difficulty"],["전반 시간","Half length"],["날씨","Weather"],["카메라","Camera"],
+ ["밸런스","Balanced"],["공격적","Attacking"],["수비적","Defensive"],["아마추어","Amateur"],["프로","Pro"],["월드클래스","World Class"],["레전드","Legendary"],
+ ["1.5분","1.5 min"],["3분","3 min"],["5분","5 min"],["낮","Day"],["야간 (조명)","Night (floodlights)"],["비","Rain"],["중계 화면","Broadcast"],["선수 뒤","Behind player"],["위에서","Top-down"],
+ ["킥오프","KICK OFF"],["← 로비로","← Lobby"],["일시정지","Paused"],["계속하기","Resume"],["로비로 나가기","Quit to menu"],["경기 종료","Full Time"],["로비로 돌아가기","Back to menu"],
+ ["스태미나","Stamina"],["파워","Power"],["골!!!","GOAL!!!"],["하프타임","HALF TIME"],["후반전","SECOND HALF"],["경기 종료!","FULL TIME"],["스로인","THROW-IN"],["코너킥","CORNER"],
+ ["골킥","GOAL KICK"],["프리킥","FREE KICK"],["파울!","FOUL!"],["페널티킥!","PENALTY!"],["준비 중입니다","Coming soon"],["BP가 부족합니다","Not enough BP"],
+ ["점유율","Possession"],["슈팅","Shots"],["패스","Passes"],["패스 성공률","Pass accuracy"],["태클 성공","Tackles won"],["파울","Fouls"],["승리! 🏆","YOU WIN! 🏆"],["패배","Defeat"],["무승부","Draw"],["골 없음","No goals"],
+];
+const K2E={},E2K={}; for(const [k,e] of PAIRS){K2E[k]=e;E2K[e]=k;}
+function tr(s){ return LANG==="en"?(K2E[s]||s):(E2K[s]||s); }
+const LT=(ko,en)=>LANG==="en"?en:ko;
+const KEYS_HTML={
+ ko:`<b>공격</b><br><kbd>방향키</kbd> 이동<br><kbd>S</kbd> 패스 (누르는 방향의 선수에게)<br><kbd>D</kbd> 슛 (꾹 누르면 더 세게)<br><kbd>X</kbd> 스루패스<br><kbd>I</kbd> 로빙 / 크로스<br><kbd>Shift</kbd> 달리기<br><b>수비</b><br><kbd>S</kbd> 태클 · <kbd>D</kbd> 슬라이딩 태클<br>선수 자동 전환 · <kbd>Q</kbd> 수동 전환<br><kbd>E</kbd> 동료 압박<br><b>기타</b><br><kbd>C</kbd> 카메라 · <kbd>P</kbd>/<kbd>Esc</kbd> 일시정지 · <kbd>M</kbd> 음소거`,
+ en:`<b>Attack</b><br><kbd>Arrows</kbd> move<br><kbd>S</kbd> pass (to teammate in pressed direction)<br><kbd>D</kbd> shoot (hold for power)<br><kbd>X</kbd> through ball<br><kbd>I</kbd> lob / cross<br><kbd>Shift</kbd> sprint<br><b>Defend</b><br><kbd>S</kbd> tackle · <kbd>D</kbd> slide tackle<br>Auto player switch · <kbd>Q</kbd> manual switch<br><kbd>E</kbd> teammate press<br><b>Other</b><br><kbd>C</kbd> camera · <kbd>P</kbd>/<kbd>Esc</kbd> pause · <kbd>M</kbd> mute`};
+const HELP_HTML={ko:"이동 <kbd>방향키</kbd> · 패스 <kbd>S</kbd> · 슛 <kbd>D</kbd> · 스루패스 <kbd>X</kbd> · 달리기 <kbd>Shift</kbd> · 패스는 누르는 방향의 선수에게",
+ en:"Move <kbd>Arrows</kbd> · Pass <kbd>S</kbd> · Shoot <kbd>D</kbd> · Through <kbd>X</kbd> · Sprint <kbd>Shift</kbd> · Passes go where you press"};
+const BTN_TXT={j:["패스","Pass"],k:["슛","Shoot"],l:["스루","Through"],shift:["달리기","Sprint"]};
+function applyLang(){
+  document.documentElement.lang=LANG; $("lang").value=LANG;
+  for(const root of ["lobby","menu","hud","pause","end"]){
+    const w=document.createTreeWalker($(root),NodeFilter.SHOW_TEXT); let n;
+    while(n=w.nextNode()){ if(n.parentNode.closest(".keys,#help,#btns,#modeTitle,#pbody,#stats,#final,#feed,#msg,#sub,#score,#pname,#poss,#fav,.cur,#toast")) continue;
+      if(n._o===undefined) n._o=n.nodeValue; const t=n._o.trim(); if(!t) continue; n.nodeValue=n._o.replace(t,tr(t)); }
+  }
+  document.querySelector(".keys").innerHTML=KEYS_HTML[LANG]; $("help").innerHTML=HELP_HTML[LANG];
+  document.querySelectorAll("#btns b").forEach(b=>b.textContent=BTN_TXT[b.dataset.k][LANG==="en"?1:0]);
+}
+$("lang").onchange=()=>{ LANG=$("lang").value; try{localStorage.setItem("fc3d_lang",LANG);}catch(e){} applyLang(); refreshLobby(); };
 const PROF={lv:1,xp:0,trophy:0,coins:5000,w:0,d:0,l:0};
 try{ Object.assign(PROF,JSON.parse(localStorage.getItem("fc3d")||"{}")); }catch(e){}
 function saveProf(){ try{localStorage.setItem("fc3d",JSON.stringify(PROF));}catch(e){} }
@@ -554,20 +592,20 @@ function reward(){ const [h,a]=G.teams, r=h.goals>a.goals?2:h.goals===a.goals?1:
   PROF[["l","d","w"][r]]++; PROF.xp+=[40,60,100][r]; while(PROF.xp>=PROF.lv*150){PROF.xp-=PROF.lv*150;PROF.lv++;} saveProf(); }
 function refreshLobby(){ $("lv").textContent=PROF.lv; $("trophy").textContent=PROF.trophy.toLocaleString(); $("coins").textContent=PROF.coins.toLocaleString();
   const t=TEAMS[+$("home").value]; $("favname").textContent=NAMES[(+$("home").value*7)%NAMES.length]+" · "+t.s; }
-function toast(s){ const t=$("toast"); t.textContent=s; t.style.opacity=1; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity=0,1600); }
-const MODE={ "1vs1":["공식 경기","1vs1",{}], "2vs2":["공식 경기","2vs2",{}], manager:["감독 모드","AUTO",{diff:"1.2"}], arena:["아레나","",{len:"90"}],
+function toast(s){ const t=$("toast"); t.textContent=tr(s); t.style.opacity=1; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity=0,1600); }
+const MODE={ "1vs1":["공식 경기","1vs1",{}], "2vs2":["공식 경기","2vs2",{}], manager:["공식 경기 감독 모드","AUTO",{diff:"1.2"}], arena:["아레나","",{len:"90"}],
   league:["멀티 스쿼드 리그","",{diff:"1"}], special:["스페셜 매치","",{weather:"night"}], squad:["스쿼드배틀","",{diff:"0.75"}], volta:["볼타 라이브","",{weather:"rain",len:"90"}] };
-document.querySelectorAll("#modes a").forEach(a=>a.onclick=()=>{ const m=MODE[a.dataset.m]; $("modeTitle").innerHTML=`${m[0]} <span>${m[1]}</span>`;
+document.querySelectorAll("#modes a").forEach(a=>a.onclick=()=>{ const m=MODE[a.dataset.m]; $("modeTitle").innerHTML=`${tr(m[0])} <span>${m[1]}</span>`;
   for(const k in m[2]) $(k).value=m[2][k]; if(a.dataset.m!=="1vs1"&&a.dataset.m!=="2vs2") $("away").value=Math.floor(Math.random()*TEAMS.length); $("menu").classList.remove("hidden"); });
 $("back").onclick=()=>$("menu").classList.add("hidden");
 const PANELS={
-  club:()=>["구단 관리",`레벨 ${PROF.lv} (XP ${PROF.xp}/${PROF.lv*150})<br>전적: ${PROF.w}승 ${PROF.d}무 ${PROF.l}패<br>트로피: ${PROF.trophy}<br>보유 BP: ${PROF.coins.toLocaleString()}`],
-  team:()=>["팀 관리",`<label>내 팀</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
-  tactic:()=>["팀 전술",`<label>포메이션</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>전술</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
-  guide:()=>["게임 가이드",document.querySelector(".keys").innerHTML],
-  update:()=>["업데이트",`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작 (Space 슛 · Z 패스 · X 스루), 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시<br><br><button class="go" onclick="location.reload()">최신 버전으로 업데이트</button>`],
-  notice:()=>["공지사항","• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비"],
-  shop:()=>["상점",`보유 BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">선수팩 구매 (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
+  club:()=>[tr("구단 관리"),LT(`레벨 ${PROF.lv} (XP ${PROF.xp}/${PROF.lv*150})<br>전적: ${PROF.w}승 ${PROF.d}무 ${PROF.l}패<br>트로피: ${PROF.trophy}<br>보유 BP: ${PROF.coins.toLocaleString()}`,`Level ${PROF.lv} (XP ${PROF.xp}/${PROF.lv*150})<br>Record: ${PROF.w}W ${PROF.d}D ${PROF.l}L<br>Trophies: ${PROF.trophy}<br>BP: ${PROF.coins.toLocaleString()}`)],
+  team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
+  tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
+  guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
+  shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
 function openPanel(k){ const f=PANELS[k]; if(!f){ toast("준비 중입니다"); return; } const [t,b]=f(); $("ptitle").textContent=t; $("pbody").innerHTML=b; $("panel").classList.remove("hidden");
   for(const id of ["home","form","tactic"]){ const e=$(id+"2"); if(e){ e.value=$(id).value; e.onchange=()=>{$(id).value=e.value; refreshLobby();}; } }
@@ -578,13 +616,13 @@ document.querySelectorAll("[data-p]").forEach(e=>e.onclick=()=>openPanel(e.datas
 $("pclose").onclick=()=>$("panel").classList.add("hidden");
 const lobbyPl=makePlayerMesh(0xffffff,0xd8202a,10,false); lobbyPl.position.set(0,0,0);
 const lobbyGk=makePlayerMesh(0,0,1,true); lobbyGk.position.set(HL-1,0,0); lobbyGk.rotation.y=Math.PI;
-refreshLobby();
+refreshLobby(); applyLang();
 function cleanup(){ if(!G)return; for(const p of allPlayers()) scene.remove(p.mesh); }
 $("start").onclick=()=>{ cleanup(); $("menu").classList.add("hidden"); $("lobby").classList.add("hidden"); lobbyPl.visible=lobbyGk.visible=false; $("hud").classList.remove("hidden"); newGame(); whistle(1); msg("KICK OFF","",1.2); };
 
 // ---------- HUD helpers ----------
 let msgT=0;
-function msg(a,b="",t=2){ $("msg").textContent=a; $("sub").textContent=b; msgT=t; }
+function msg(a,b="",t=2){ $("msg").textContent=tr(a); $("sub").textContent=b; msgT=t; }
 function feed(s){ const d=document.createElement("div"); d.textContent=s; $("feed").prepend(d); while($("feed").children.length>5) $("feed").lastChild.remove(); setTimeout(()=>d.remove(),6000); }
 function fmtClock(){ const total=G.clock/G.halfLen*45+(G.half-1)*45; const m=Math.floor(total), s=Math.floor((total-m)*60); return `${m}:${String(s).padStart(2,"0")}`; }
 
@@ -807,9 +845,9 @@ function endMatch(){
     if(!G) return;
     $("final").textContent=`${h.t.s} ${h.goals} - ${a.goals} ${a.t.s}`;
     const tp=h.possT+a.possT||1;
-    const rows=[["Possession",Math.round(h.possT/tp*100)+"%",Math.round(a.possT/tp*100)+"%"],["Shots",h.shots,a.shots],["Passes",h.passes,a.passes],["Pass accuracy",pct(h),pct(a)],["Tackles won",h.tackles,a.tackles],["Fouls",h.fouls,a.fouls]];
-    $("stats").innerHTML=rows.map(r=>`<tr><td>${r[1]}</td><td>${r[0]}</td><td>${r[2]}</td></tr>`).join("")+`<tr><td colspan=3 style="text-align:left;font-size:13px">${G.events.join("<br>")||"No goals"}</td></tr>`;
-    const res=h.goals>a.goals?"YOU WIN! 🏆":h.goals<a.goals?"Defeat":"Draw";
+    const rows=[[tr("점유율"),Math.round(h.possT/tp*100)+"%",Math.round(a.possT/tp*100)+"%"],[tr("슈팅"),h.shots,a.shots],[tr("패스"),h.passes,a.passes],[tr("패스 성공률"),pct(h),pct(a)],[tr("태클 성공"),h.tackles,a.tackles],[tr("파울"),h.fouls,a.fouls]];
+    $("stats").innerHTML=rows.map(r=>`<tr><td>${r[1]}</td><td>${r[0]}</td><td>${r[2]}</td></tr>`).join("")+`<tr><td colspan=3 style="text-align:left;font-size:13px">${G.events.join("<br>")||tr("골 없음")}</td></tr>`;
+    const res=tr(h.goals>a.goals?"승리! 🏆":h.goals<a.goals?"패배":"무승부");
     $("final").innerHTML+=`<div style="font-size:18px;color:#19e68c">${res}</div>`;
     $("end").classList.remove("hidden");
   },2000);
@@ -862,7 +900,7 @@ function updateHUD(){
   const c=G.ctrl;
   if(c){ $("pname").textContent=`#${c.num} ${c.name}`; $("stam").style.width=(c.stamina*100)+"%"; $("stam").style.background=c.stamina>.4?"#19e68c":"#ff5050"; }
   $("pow").style.width=(powerHold?Math.min(1,(performance.now()-powerHold.t)/900)*100:0)+"%";
-  const [h,a]=G.teams, tp=h.possT+a.possT||1; $("poss").textContent=`Possession ${Math.round(h.possT/tp*100)}% - ${Math.round(a.possT/tp*100)}%`;
+  const [h,a]=G.teams, tp=h.possT+a.possT||1; $("poss").textContent=`${tr("점유율")} ${Math.round(h.possT/tp*100)}% - ${Math.round(a.possT/tp*100)}%`;
   if(c){ marker.visible=ring.visible=true; marker.position.set(c.pos.x,2.3+Math.sin(performance.now()*.008)*.1,c.pos.z); ring.position.set(c.pos.x,.03,c.pos.z); }
   ballMesh.position.copy(ball.pos); ballShadow.position.set(ball.pos.x,.02,ball.pos.z); ballShadow.scale.setScalar(1/(1+ball.pos.y*.3));
   if(rain){ const a=rain.geometry.attributes.position; for(let i=0;i<a.count;i++){ let y=a.getY(i)-.8; if(y<0)y=40; a.setY(i,y);} a.needsUpdate=true; }
