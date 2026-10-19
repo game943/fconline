@@ -156,7 +156,7 @@
   <canvas id="mini" width="210" height="136"></canvas>
   <div id="help">이동 <kbd>방향키</kbd> · 패스 <kbd>S</kbd> · 슛 <kbd>D</kbd> · 스루패스 <kbd>X</kbd> · 패스는 누르는 방향의 선수에게 · 달리기 <kbd>Shift</kbd> · 수비는 자동으로 선수가 바뀌고 가까이 가면 자동 태클</div>
   <div id="pad"><div id="stick"><i></i></div>
-    <div id="btns"><b data-k="l">스루</b><b data-k="k" class="big">슛</b><b data-k="j">패스</b><b data-k="shift">달리기</b></div></div>
+    <div id="btns"><b data-k="l">스루</b><b data-k="k" class="big">슛</b><b data-k="j">패스</b><b data-k="shift">달리기</b><b data-k="a">크로스</b></div></div>
 </div>
 
 <div id="pause" class="hidden"><div class="card" style="max-width:360px;text-align:center">
@@ -439,6 +439,19 @@ function doPass(p,dir,through,lob){
   else{ const pw=Math.min(36,dist*1.1+(p.team.human?14:10)); kick(p,v,pw,through?.5:0.2); }
   if(t&&p.team.human) G.passTarget=t;
 }
+function doCross(p){
+  const tm=p.team, gx=tm.dir*HL, spot=V(gx-tm.dir*9,0);
+  let tgt=null,bd=1e9;
+  for(const m of tm.players){ if(m===p||m.gk) continue; const inBox=Math.abs(m.pos.x-gx)<20&&Math.abs(m.pos.z)<22; if(!inBox) continue; const d=m.pos.distanceTo(spot); if(d<bd){bd=d;tgt=m;} }
+  const aim=tgt?tgt.pos.clone().add(V(tm.dir*1.5,0)):V(gx-tm.dir*8,-Math.sign(p.pos.z||1)*2);
+  aim.x=Math.max(-HL+4,Math.min(HL-4,aim.x));
+  const v=aim.clone().sub(p.pos).setY(0), dist=v.length();
+  const pw=Math.max(16,Math.min(30,dist*.85)), t=dist/pw;
+  tm.passes++; G.pendingPass={team:tm,t:3};
+  kick(p,v,pw,Math.min(13,9.8*t*.5+1.5),(Math.random()-.5)*1.5);
+  G.cross={team:tm,t:3,aim}; if(tgt&&tm.human) G.passTarget=tgt;
+  if(tm.human) feed(LT(`${p.name} 크로스!`,`${p.name} crosses!`));
+}
 function doShoot(p,power){
   const gx=p.team.dir*HL, aimZ=(Math.random()-.5)*GOAL_W*.85;
   let tz=aimZ;
@@ -501,6 +514,7 @@ addEventListener("keydown",e=>{
     if(k==="j") { doPass(c,inputDir(),false,false); startPlay(); }
     if(k==="l") { doPass(c,inputDir(),true,false); startPlay(); }
     if(k==="i") { doPass(c,inputDir(),false,true); startPlay(); }
+    if(k==="a") { doCross(c); startPlay(); }
     if(k==="k") powerHold={t:performance.now()};
   } else {
     if(k==="j") tackle(c,false);
@@ -546,7 +560,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="1.6";
+const VERSION="1.7";
 // ---------- language ----------
 let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
 const PAIRS=[ // [Korean, English]
@@ -568,11 +582,11 @@ const K2E={},E2K={}; for(const [k,e] of PAIRS){K2E[k]=e;E2K[e]=k;}
 function tr(s){ return LANG==="en"?(K2E[s]||s):(E2K[s]||s); }
 const LT=(ko,en)=>LANG==="en"?en:ko;
 const KEYS_HTML={
- ko:`<b>공격</b><br><kbd>방향키</kbd> 이동<br><kbd>S</kbd> 패스 (누르는 방향의 선수에게)<br><kbd>D</kbd> 슛 (꾹 누르면 더 세게)<br><kbd>X</kbd> 스루패스<br><kbd>I</kbd> 로빙 / 크로스<br><kbd>Shift</kbd> 달리기<br><b>수비</b><br><kbd>S</kbd> 태클 · <kbd>D</kbd> 슬라이딩 태클<br>선수 자동 전환 · <kbd>Q</kbd> 수동 전환<br><kbd>E</kbd> 동료 압박<br><b>기타</b><br><kbd>C</kbd> 카메라 · <kbd>P</kbd>/<kbd>Esc</kbd> 일시정지 · <kbd>M</kbd> 음소거`,
- en:`<b>Attack</b><br><kbd>Arrows</kbd> move<br><kbd>S</kbd> pass (to teammate in pressed direction)<br><kbd>D</kbd> shoot (hold for power)<br><kbd>X</kbd> through ball<br><kbd>I</kbd> lob / cross<br><kbd>Shift</kbd> sprint<br><b>Defend</b><br><kbd>S</kbd> tackle · <kbd>D</kbd> slide tackle<br>Auto player switch · <kbd>Q</kbd> manual switch<br><kbd>E</kbd> teammate press<br><b>Other</b><br><kbd>C</kbd> camera · <kbd>P</kbd>/<kbd>Esc</kbd> pause · <kbd>M</kbd> mute`};
-const HELP_HTML={ko:"이동 <kbd>방향키</kbd> · 패스 <kbd>S</kbd> · 슛 <kbd>D</kbd> · 스루패스 <kbd>X</kbd> · 달리기 <kbd>Shift</kbd> · 패스는 누르는 방향의 선수에게",
- en:"Move <kbd>Arrows</kbd> · Pass <kbd>S</kbd> · Shoot <kbd>D</kbd> · Through <kbd>X</kbd> · Sprint <kbd>Shift</kbd> · Passes go where you press"};
-const BTN_TXT={j:["패스","Pass"],k:["슛","Shoot"],l:["스루","Through"],shift:["달리기","Sprint"]};
+ ko:`<b>공격</b><br><kbd>방향키</kbd> 이동<br><kbd>S</kbd> 패스 (누르는 방향의 선수에게)<br><kbd>D</kbd> 슛 (꾹 누르면 더 세게)<br><kbd>X</kbd> 스루패스<br><kbd>A</kbd> 크로스 (측면에서 박스 안으로)<br><kbd>I</kbd> 로빙 패스<br><kbd>Shift</kbd> 달리기<br><b>수비</b><br><kbd>S</kbd> 태클 · <kbd>D</kbd> 슬라이딩 태클<br>선수 자동 전환 · <kbd>Q</kbd> 수동 전환<br><kbd>E</kbd> 동료 압박<br><b>기타</b><br><kbd>C</kbd> 카메라 · <kbd>P</kbd>/<kbd>Esc</kbd> 일시정지 · <kbd>M</kbd> 음소거`,
+ en:`<b>Attack</b><br><kbd>Arrows</kbd> move<br><kbd>S</kbd> pass (to teammate in pressed direction)<br><kbd>D</kbd> shoot (hold for power)<br><kbd>X</kbd> through ball<br><kbd>A</kbd> cross (from the wing into the box)<br><kbd>I</kbd> lob pass<br><kbd>Shift</kbd> sprint<br><b>Defend</b><br><kbd>S</kbd> tackle · <kbd>D</kbd> slide tackle<br>Auto player switch · <kbd>Q</kbd> manual switch<br><kbd>E</kbd> teammate press<br><b>Other</b><br><kbd>C</kbd> camera · <kbd>P</kbd>/<kbd>Esc</kbd> pause · <kbd>M</kbd> mute`};
+const HELP_HTML={ko:"이동 <kbd>방향키</kbd> · 패스 <kbd>S</kbd> · 슛 <kbd>D</kbd> · 스루패스 <kbd>X</kbd> · 크로스 <kbd>A</kbd> · 달리기 <kbd>Shift</kbd> · 패스는 누르는 방향의 선수에게",
+ en:"Move <kbd>Arrows</kbd> · Pass <kbd>S</kbd> · Shoot <kbd>D</kbd> · Through <kbd>X</kbd> · Cross <kbd>A</kbd> · Sprint <kbd>Shift</kbd> · Passes go where you press"};
+const BTN_TXT={a:["크로스","Cross"],j:["패스","Pass"],k:["슛","Shoot"],l:["스루","Through"],shift:["달리기","Sprint"]};
 function applyLang(){
   document.documentElement.lang=LANG; $("lang").value=LANG;
   for(const root of ["lobby","menu","hud","pause","end"]){
@@ -603,7 +617,7 @@ const PANELS={
   team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
-  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
   notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
   shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
@@ -642,7 +656,7 @@ function aiPlayer(p,dt){
       p.think=.25+Math.random()*.3;
       if(dGoal<24&&Math.random()<(dGoal<14?.7:.25)*sk){ doShoot(p,.55+Math.random()*.4); return; }
       if(pressure<3.2&&Math.random()<.75 || Math.random()<.08){ doPass(p,V(tm.dir,0),Math.random()<.25,Math.random()<.12); return; }
-      if(Math.abs(p.pos.x-tm.dir*HL)<20&&Math.abs(p.pos.z)>18&&Math.random()<.5){ doPass(p,V(0,-Math.sign(p.pos.z)),false,true); return; }
+      if(Math.abs(p.pos.x-tm.dir*HL)<26&&Math.abs(p.pos.z)>15&&Math.random()<.6){ doCross(p); return; }
     }
     const dodge=V(); for(const o of opp.players){ const d=p.pos.clone().sub(o.pos); const l=d.length(); if(l<5&&l>.01) dodge.add(d.multiplyScalar((5-l)/l*.5)); }
     target=p.pos.clone().add(goal.clone().sub(p.pos).normalize().multiplyScalar(5)).add(V(0,dodge.z*1.5));
@@ -665,6 +679,7 @@ function aiPlayer(p,dt){
   } else {
     // attacking support
     target=tm.homePos(p,ball.pos.x,true);
+    if(G.cross&&G.cross.team===tm&&p.home[0]>.5){ target=G.cross.aim.clone().add(V(-tm.dir*(p.idx%3)*2,((p.idx%3)-1)*4)); sprint=true; }
     if(ball.owner&&p.home[0]>.55) target.x+=tm.dir*4;
     target.z+=Math.sin(G.clock*.5+p.idx)*3;
     // loose ball: nearest chases
@@ -772,6 +787,18 @@ function update(dt){
 
   // ball
   if(ball.owner) dribbleBall(ball.owner); else physicsBall(dt);
+  // headers & volleys from crosses
+  if(G.cross){ G.cross.t-=dt; if(G.cross.t<=0||ball.owner) G.cross=null; }
+  if(!ball.owner&&ball.free<=0&&ball.pos.y>0.9&&ball.pos.y<2.7){
+    let hb=null,hd=1.4; for(const p of ap){ if(p.gk||p.slide>0) continue; const d=Math.hypot(ball.pos.x-p.pos.x,ball.pos.z-p.pos.z); if(d<hd){hd=d;hb=p;} }
+    if(hb){
+      const atk=G.cross&&G.cross.team===hb.team, gx=hb.team.dir*HL;
+      if(atk&&Math.abs(hb.pos.x-gx)<22){ const tz=(Math.random()-.5)*GOAL_W*.8; const d=V(gx-hb.pos.x,tz-hb.pos.z);
+        hb.team.shots++; kick(hb,d,ball.pos.y>1.6?20:26,ball.pos.y>1.6?1.5:2.5); hb.mesh.position.y=.5; G.shotBy=hb.team;
+        feed(ball.pos.y>1.6?LT(`${hb.name} 헤딩슛!`,`${hb.name} header!`):LT(`${hb.name} 발리슛!`,`${hb.name} volley!`)); crowd(); G.cross=null; }
+      else if(!atk&&G.cross){ kick(hb,V(hb.team.dir,(Math.random()-.5)),18,6); feed(LT(`${hb.name} 걷어내기`,`${hb.name} clears`)); G.cross=null; }
+    }
+  }
   // pick up
   if(!ball.owner&&ball.free<=0&&ball.pos.y<1.2){
     let best=null,bd=1.0;
