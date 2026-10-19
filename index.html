@@ -34,8 +34,18 @@
   #bottombar a{padding:14px 24px;white-space:nowrap;border-right:1px solid #ffffff22}#bottombar a::before{content:"●";color:#19e68c;font-size:8px;margin-right:6px;vertical-align:top}
   #bottombar a:hover{background:#ffffff18}
   #toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 16px;border-radius:6px;opacity:0;transition:.3s}
-  #panel{position:absolute;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px}
-  #panel .card{max-width:480px;font-weight:400;max-height:86vh;overflow:auto}
+  #panel{position:absolute;inset:0;z-index:3;background:linear-gradient(160deg,#0d1640,#05070f);display:flex;flex-direction:column;font-weight:400}
+  #phead{height:60px;flex:none;display:flex;align-items:center;gap:18px;padding:0 20px;background:linear-gradient(90deg,#1b1f5e,#2a2f86 60%,#1b1f5e);border-bottom:2px solid #4a55c8}
+  #pclose{width:auto;padding:8px 16px;font-weight:700;cursor:pointer}
+  #ptitle{font-size:24px;font-weight:900;flex:1;letter-spacing:1px}
+  #pcur{color:#ffd54a;font-weight:700;white-space:nowrap}
+  #pwrap{flex:1;overflow:auto;padding:24px 16px}
+  #pbody{max-width:1100px;margin:0 auto;font-size:16px;line-height:1.7}
+  #pbody .it{display:inline-flex;flex-direction:column;justify-content:space-between;gap:10px;vertical-align:top;width:calc(33.3% - 12px);min-width:220px;margin:6px;padding:16px;border-radius:10px;background:linear-gradient(145deg,#1b2a7a,#121a3f);border:1px solid #3a4aa0;min-height:110px}
+  #pbody .it b{font-size:18px}
+  #pbody h3{margin:20px 6px 6px;font-size:20px}
+  #pbody .it button{align-self:flex-start}
+  @media(max-width:700px){#pbody .it{width:calc(100% - 12px)}}
   button:disabled{opacity:.4}
   @media(max-width:760px){#side,#fav{display:none}#modes{top:70px}#modes a{font-size:16px;padding:9px}#topbar .cur{display:none}}
   .card{background:var(--panel);border:1px solid #2a3a66;border-radius:14px;padding:22px;max-width:760px;width:100%}
@@ -105,7 +115,7 @@
     <a data-p="reg">선수 등록</a><a data-p="chal">도전 과제</a><a data-p="locker">라커룸</a><a data-p="transfer">이적시장</a><a data-p="watch">관전</a><a data-p="item">아이템</a><a data-p="shop">상점</a>
   </div>
   <div id="toast"></div>
-  <div id="panel" class="hidden"><div class="card"><div id="ptitle" style="font-size:22px;font-weight:800;margin-bottom:10px"></div><div id="pbody"></div><button id="pclose" style="margin-top:14px">닫기</button></div></div>
+  <div id="panel" class="hidden"><div id="phead"><button id="pclose">← 로비로</button><div id="ptitle"></div><div id="pcur"></div></div><div id="pwrap"><div id="pbody"></div></div></div>
 </div>
 <div id="menu" class="hidden"><div class="card">
   <h1 id="modeTitle">공식 경기 <span>1vs1</span></h1>
@@ -568,7 +578,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="1.9";
+const VERSION="2.0";
 // ---------- language ----------
 let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
 const PAIRS=[ // [Korean, English]
@@ -631,7 +641,7 @@ const PANELS={
   team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
-  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.9 메인 메뉴 전부 작동 — 클럽하우스, 훈련 센터, 선수 등록, 도전 과제, 라커룸, 이적시장, 관전, 아이템<br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.9 Every main menu works — Clubhouse, Training, Register, Challenges, Locker Room, Transfers, Spectate, Items<br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v2.0 메뉴가 전체 화면 페이지로 바뀜, 선수 카드 디자인<br>• v1.9 메인 메뉴 전부 작동 — 클럽하우스, 훈련 센터, 선수 등록, 도전 과제, 라커룸, 이적시장, 관전, 아이템<br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v2.0 Menus open as full pages, player card design<br>• v1.9 Every main menu works — Clubhouse, Training, Register, Challenges, Locker Room, Transfers, Spectate, Items<br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
   notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
   shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
@@ -647,8 +657,8 @@ const ACH=[
 let MARKET=[]; function rollMarket(){ MARKET=Array.from({length:6},()=>{const p=randPlayer(70,32); p.price=Math.round((p.o-60)**2*12/100)*100; return p;}); }
 rollMarket();
 let curPanel=null;
-const card=p=>`<span><b>${p.n}</b> <span style="color:#19e68c">${p.o}</span> <small style="opacity:.7">${p.p}</small></span>`;
-const rowS='style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #334"';
+const card=p=>`<span style="display:flex;align-items:center;gap:12px"><span style="font-size:30px;font-weight:900;color:${p.o>=95?'#ffd54a':p.o>=85?'#19e68c':'#9fb3ff'}">${p.o}</span><span><b>${p.n}</b>${p.o>=95?' ⭐':''}<br><small style="opacity:.7">${p.p}</small></span></span>`;
+const rowS='class="it"';
 const sBtn=(txt,js,dis)=>`<button style="width:auto;padding:5px 10px" ${dis?"disabled":""} onclick="${js}">${txt}</button>`;
 function act(fn){ fn(); saveProf(); refreshLobby(); openPanel(curPanel); }
 function spend(c){ if(PROF.coins<c){ toast("BP가 부족합니다"); return false; } PROF.coins-=c; return true; }
@@ -666,16 +676,16 @@ Object.assign(PANELS,{
      return [tr("라커룸"),LT("유니폼을 고르세요 (다음 경기부터 적용)","Pick a kit (applies next match)")+kits.map(k=>{ const on=JSON.stringify(PROF.kit)===JSON.stringify(k[2]);
        const sw=k[2]?`<span style="display:inline-block;width:18px;height:18px;border-radius:3px;background:#${k[2][0].toString(16).padStart(6,"0")};border:3px solid #${k[2][1].toString(16).padStart(6,"0")}"></span>`:"";
        return `<div ${rowS}><span>${sw} ${LT(k[0],k[1])}</span>${on?"✅":sBtn(LT("입기","Wear"),`act(()=>PROF.kit=${JSON.stringify(k[2])})`)}</div>`; }).join("")]; },
-  transfer:()=>[tr("이적시장"),`BP: ${PROF.coins.toLocaleString()} `+sBtn(LT("🔄 새로고침","🔄 Refresh"),"rollMarket();openPanel('transfer')")+`<br><br><b>${LT("구매","Buy")}</b>`
+  transfer:()=>[tr("이적시장"),`BP: ${PROF.coins.toLocaleString()} `+sBtn(LT("🔄 새로고침","🔄 Refresh"),"rollMarket();openPanel('transfer')")+`<h3>${LT("구매","Buy")}</h3>`
      +MARKET.map((p,i)=>`<div ${rowS}>${card(p)} ${p.sold?"✅":sBtn(`${p.price.toLocaleString()} BP`,`act(()=>{ const p=MARKET[${i}]; if(spend(p.price)){ p.sold=1; PROF.squad.push({n:p.n,o:p.o,p:p.p}); } })`)}</div>`).join("")
-     +`<br><b>${LT("판매","Sell")}</b>`+(PROF.squad.map((p,i)=>`<div ${rowS}>${card(p)} ${sBtn(`+${(Math.round((p.o-60)**2*6/100)*100).toLocaleString()} BP`,`act(()=>{ const p=PROF.squad.splice(${i},1)[0]; PROF.coins+=Math.round((p.o-60)**2*6/100)*100; if(PROF.fav===${i})PROF.fav=-1; else if(PROF.fav>${i})PROF.fav--; })`)}</div>`).join("")||LT("<br>판매할 선수가 없어요","<br>No players to sell"))],
+     +`<h3>${LT("판매","Sell")}</h3>`+(PROF.squad.map((p,i)=>`<div ${rowS}>${card(p)} ${sBtn(`+${(Math.round((p.o-60)**2*6/100)*100).toLocaleString()} BP`,`act(()=>{ const p=PROF.squad.splice(${i},1)[0]; PROF.coins+=Math.round((p.o-60)**2*6/100)*100; if(PROF.fav===${i})PROF.fav=-1; else if(PROF.fav>${i})PROF.fav--; })`)}</div>`).join("")||LT("판매할 선수가 없어요","No players to sell"))],
   watch:()=>[tr("관전"),LT("AI 팀끼리의 경기를 관전합니다. 보상은 없어요.","Watch two AI teams play. No rewards.")+`<br><br><label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="wh"')+`<label style="margin-top:8px">${tr("상대 팀")}</label>`+$("away").outerHTML.replace('id="away"','id="wa"')
      +`<br><br><button class="go" onclick="startMatch(true)">${LT("관전 시작","Start watching")}</button>`],
   item:()=>{ const it=[["drink","⚡ 스태미나 드링크","⚡ Stamina drink","다음 경기 스태미나 회복 2배","Double stamina recovery next match",1500],["charm","🍀 행운 부적","🍀 Lucky charm","다음 경기 BP 보상 2배","Double BP reward next match",2000]];
      return [tr("아이템"),`BP: ${PROF.coins.toLocaleString()}`+it.map(([k,ko,en,dk,de,c])=>`<div ${rowS}><span>${LT(ko,en)} ×${PROF.items[k]}<br><small style="opacity:.7">${LT(dk,de)}</small></span><span>${sBtn(`${c} BP`,`act(()=>{ if(spend(${c})) PROF.items.${k}++; })`)} ${sBtn(PROF.use[k]?LT("사용 중","On"):LT("사용","Use"),`act(()=>{ PROF.use.${k}=!PROF.use.${k}&&PROF.items.${k}>0; })`,!PROF.items[k]&&!PROF.use[k])}</span></div>`).join("")]; },
 });
 PAIRS.push(["클럽하우스","Clubhouse"],["관전 시작","Start watching"]);
-function openPanel(k){ curPanel=k; const f=PANELS[k]; if(!f){ toast("준비 중입니다"); return; } const [t,b]=f(); $("ptitle").textContent=t; $("pbody").innerHTML=b; $("panel").classList.remove("hidden");
+function openPanel(k){ curPanel=k; const f=PANELS[k]; if(!f){ toast("준비 중입니다"); return; } const [t,b]=f(); $("ptitle").textContent=t; $("pbody").innerHTML=b; $("pcur").textContent=`LV ${PROF.lv} · 🏆 ${PROF.trophy} · 💰 ${PROF.coins.toLocaleString()} BP`; $("panel").classList.remove("hidden");
   for(const id of ["home","form","tactic"]){ const e=$(id+"2"); if(e){ e.value=$(id).value; e.onchange=()=>{$(id).value=e.value; refreshLobby();}; } }
   const by=$("buy"); if(by) by.onclick=()=>{ if(!spend(3000)) return; const np=randPlayer(75,30); PROF.squad.push(np); PROF.packs++; saveProf();
     $("pack").innerHTML=`🎉 ${card(np)}${np.o>=95?" ⭐ICON":""} — ${LT("선수 등록에 추가됨","added to your squad")}`; refreshLobby(); };
