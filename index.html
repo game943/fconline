@@ -35,7 +35,8 @@
   #bottombar a:hover{background:#ffffff18}
   #toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:#000c;padding:8px 16px;border-radius:6px;opacity:0;transition:.3s}
   #panel{position:absolute;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px}
-  #panel .card{max-width:480px;font-weight:400}
+  #panel .card{max-width:480px;font-weight:400;max-height:86vh;overflow:auto}
+  button:disabled{opacity:.4}
   @media(max-width:760px){#side,#fav{display:none}#modes{top:70px}#modes a{font-size:16px;padding:9px}#topbar .cur{display:none}}
   .card{background:var(--panel);border:1px solid #2a3a66;border-radius:14px;padding:22px;max-width:760px;width:100%}
   h1{margin:0 0 4px;font-size:34px;letter-spacing:1px}h1 span{color:var(--acc)}
@@ -353,11 +354,16 @@ class Team{
 const ball={pos:new THREE.Vector3(0,.22,0),vel:new THREE.Vector3(),spin:0,owner:null,last:null,lastTouchTeam:null,free:0};
 
 function newGame(){
-  const hi=+$("home").value, ai=+$("away").value;
-  const home=new Team(TEAMS[hi],0,$("form").value,true);
+  const spec=G0spec, hi=spec?spec.h:+$("home").value, ai=spec?spec.a:+$("away").value;
+  const ht=Object.assign({},TEAMS[hi]); if(!spec){ ht.r=Math.min(99,ht.r+teamBonus()); if(PROF.kit){ ht.c=PROF.kit[0]; ht.c2=PROF.kit[1]; } }
+  const home=new Team(ht,0,spec?AI_FORM[1]:$("form").value,!spec);
   const away=new Team(TEAMS[ai===hi?(hi+1)%TEAMS.length:ai],1,AI_FORM[Math.floor(Math.random()*3)],false);
-  home.tactic=+$("tactic").value; away.tactic=0;
-  G={teams:[home,away],diff:+$("diff").value,half:1,halfLen:+$("len").value,clock:0,state:"kickoff",stateT:0,
+  home.tactic=spec?0:+$("tactic").value; away.tactic=0;
+  let drink=false,charm=false;
+  if(!spec){ if(PROF.use.drink&&PROF.items.drink>0){ PROF.items.drink--; drink=true; } if(PROF.use.charm&&PROF.items.charm>0){ PROF.items.charm--; charm=true; }
+    PROF.use.drink=PROF.use.drink&&PROF.items.drink>0; PROF.use.charm=PROF.use.charm&&PROF.items.charm>0; saveProf(); }
+  home.drink=drink;
+  G={spectate:!!spec,charm,teams:[home,away],diff:+$("diff").value,half:1,halfLen:+$("len").value,clock:0,state:"kickoff",stateT:0,
      ctrl:null,camMode:$("cam").value,paused:false,kickTeam:0,events:[],rain:$("weather").value==="rain",cpuPress:null};
   setWeather($("weather").value);
   $("hn").textContent=home.t.s; $("an").textContent=away.t.s;
@@ -504,6 +510,7 @@ addEventListener("keydown",e=>{
   if(!G) return;
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)) e.preventDefault();
   if(k==="p"||k==="escape"){ togglePause(); return; }
+  if(G.spectate&&k!=="c"&&k!=="m") return;
   if(k==="m"){ muted=!muted; feed(muted?"Sound off":"Sound on"); }
   if(k==="c"){ const m=["tv","pro","top"]; G.camMode=m[(m.indexOf(G.camMode)+1)%3]; feed("Camera: "+G.camMode); }
   if(G.paused||!(G.state==="play"||(G.state==="setpiece"||G.state==="kickoff")&&G.stateT<=0)) { if(k==="k") powerHold={t:performance.now()}; return; }
@@ -561,7 +568,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="1.8";
+const VERSION="1.9";
 // ---------- language ----------
 let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
 const PAIRS=[ // [Korean, English]
@@ -599,14 +606,20 @@ function applyLang(){
   document.querySelectorAll("#btns b").forEach(b=>b.textContent=BTN_TXT[b.dataset.k][LANG==="en"?1:0]);
 }
 $("lang").onchange=()=>{ LANG=$("lang").value; try{localStorage.setItem("fc3d_lang",LANG);}catch(e){} applyLang(); refreshLobby(); };
-const PROF={lv:1,xp:0,trophy:0,coins:5000,w:0,d:0,l:0};
+const PROF={lv:1,xp:0,trophy:0,coins:5000,w:0,d:0,l:0,squad:[],hist:[],train:0,goalsTot:0,packs:0,claimed:{},kit:null,items:{drink:0,charm:0},use:{drink:false,charm:false},fav:-1};
 try{ Object.assign(PROF,JSON.parse(localStorage.getItem("fc3d")||"{}")); }catch(e){}
 function saveProf(){ try{localStorage.setItem("fc3d",JSON.stringify(PROF));}catch(e){} }
-function reward(){ const [h,a]=G.teams, r=h.goals>a.goals?2:h.goals===a.goals?1:0;
-  PROF.coins+=[300,600,1200][r]+h.goals*100; PROF.trophy+=[-10,5,25][r]; PROF.trophy=Math.max(0,PROF.trophy);
-  PROF[["l","d","w"][r]]++; PROF.xp+=[40,60,100][r]; while(PROF.xp>=PROF.lv*150){PROF.xp-=PROF.lv*150;PROF.lv++;} saveProf(); }
+const POSS=["ST","LW","RW","CAM","CM","CDM","LB","CB","RB","GK"];
+function randPlayer(minO=72,spread=30){ return {n:NAMES[Math.floor(Math.random()*NAMES.length)],o:minO+Math.floor(Math.random()**2*spread),p:POSS[Math.floor(Math.random()*POSS.length)]}; }
+function teamBonus(){ const top=PROF.squad.slice().sort((a,b)=>b.o-a.o).slice(0,5); const sq=top.length?Math.max(0,Math.round((top.reduce((x,y)=>x+y.o,0)/top.length-80)/3)):0; return PROF.train+sq; }
+function reward(){ if(G.spectate) return; const [h,a]=G.teams, r=h.goals>a.goals?2:h.goals===a.goals?1:0;
+  const mult=G.charm?2:1;
+  PROF.coins+=([300,600,1200][r]+h.goals*100)*mult; PROF.trophy+=[-10,5,25][r]; PROF.trophy=Math.max(0,PROF.trophy);
+  PROF[["l","d","w"][r]]++; PROF.goalsTot+=h.goals; PROF.hist.unshift(`${h.t.s} ${h.goals}-${a.goals} ${a.t.s}`); PROF.hist=PROF.hist.slice(0,8);
+  PROF.xp+=[40,60,100][r]; while(PROF.xp>=PROF.lv*150){PROF.xp-=PROF.lv*150;PROF.lv++;} saveProf(); }
 function refreshLobby(){ $("lv").textContent=PROF.lv; $("trophy").textContent=PROF.trophy.toLocaleString(); $("coins").textContent=PROF.coins.toLocaleString();
-  const t=TEAMS[+$("home").value]; $("favname").textContent=NAMES[(+$("home").value*7)%NAMES.length]+" · "+t.s; }
+  const t=TEAMS[+$("home").value], f=PROF.squad[PROF.fav];
+  $("favname").textContent=f?`${f.n} ${f.o} · ${f.p}`:NAMES[(+$("home").value*7)%NAMES.length]+" · "+t.s; }
 function toast(s){ const t=$("toast"); t.textContent=tr(s); t.style.opacity=1; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity=0,1600); }
 const MODE={ "1vs1":["공식 경기","1vs1",{}], "2vs2":["공식 경기","2vs2",{}], manager:["공식 경기 감독 모드","AUTO",{diff:"1.2"}], arena:["아레나","",{len:"90"}],
   league:["멀티 스쿼드 리그","",{diff:"1"}], special:["스페셜 매치","",{weather:"night"}], squad:["스쿼드배틀","",{diff:"0.75"}], volta:["볼타 라이브","",{weather:"rain",len:"90"}] };
@@ -618,14 +631,54 @@ const PANELS={
   team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
-  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.9 메인 메뉴 전부 작동 — 클럽하우스, 훈련 센터, 선수 등록, 도전 과제, 라커룸, 이적시장, 관전, 아이템<br>• v1.8 패스가 받는 선수 발에 바로 딱 붙음<br>• v1.7 크로스(A) 추가 — 헤딩·발리슛, 공격수 박스 침투<br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.9 Every main menu works — Clubhouse, Training, Register, Challenges, Locker Room, Transfers, Spectate, Items<br>• v1.8 Passes snap straight to the receiver<br>• v1.7 Crosses (A) — headers, volleys, box runs<br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
   notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
   shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
-function openPanel(k){ const f=PANELS[k]; if(!f){ toast("준비 중입니다"); return; } const [t,b]=f(); $("ptitle").textContent=t; $("pbody").innerHTML=b; $("panel").classList.remove("hidden");
+
+const ACH=[
+ {k:"win1",ko:"첫 승리",en:"First win",cur:()=>PROF.w,need:1,rew:1000},
+ {k:"win5",ko:"5승 달성",en:"Win 5 matches",cur:()=>PROF.w,need:5,rew:3000},
+ {k:"goal10",ko:"누적 10골",en:"Score 10 goals",cur:()=>PROF.goalsTot,need:10,rew:2000},
+ {k:"pack3",ko:"선수팩 3개 열기",en:"Open 3 packs",cur:()=>PROF.packs,need:3,rew:1500},
+ {k:"lv5",ko:"레벨 5 달성",en:"Reach level 5",cur:()=>PROF.lv,need:5,rew:5000},
+ {k:"train5",ko:"훈련 5단계",en:"Training level 5",cur:()=>PROF.train,need:5,rew:2500},
+];
+let MARKET=[]; function rollMarket(){ MARKET=Array.from({length:6},()=>{const p=randPlayer(70,32); p.price=Math.round((p.o-60)**2*12/100)*100; return p;}); }
+rollMarket();
+let curPanel=null;
+const card=p=>`<span><b>${p.n}</b> <span style="color:#19e68c">${p.o}</span> <small style="opacity:.7">${p.p}</small></span>`;
+const rowS='style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #334"';
+const sBtn=(txt,js,dis)=>`<button style="width:auto;padding:5px 10px" ${dis?"disabled":""} onclick="${js}">${txt}</button>`;
+function act(fn){ fn(); saveProf(); refreshLobby(); openPanel(curPanel); }
+function spend(c){ if(PROF.coins<c){ toast("BP가 부족합니다"); return false; } PROF.coins-=c; return true; }
+Object.assign(PANELS,{
+  house:()=>[tr("클럽하우스"),LT(`🏟 클럽 등급: <b>${["브론즈","실버","골드","플래티넘","월드클래스"][Math.min(4,Math.floor(PROF.trophy/100))]}</b><br>전적: ${PROF.w}승 ${PROF.d}무 ${PROF.l}패 · 누적 골 ${PROF.goalsTot}<br>보유 선수: ${PROF.squad.length}명 · 팀 보너스 +${teamBonus()} OVR`,
+     `🏟 Club tier: <b>${["Bronze","Silver","Gold","Platinum","World Class"][Math.min(4,Math.floor(PROF.trophy/100))]}</b><br>Record: ${PROF.w}W ${PROF.d}D ${PROF.l}L · Goals ${PROF.goalsTot}<br>Players: ${PROF.squad.length} · Team bonus +${teamBonus()} OVR`)
+     +`<br><br><b>${LT("최근 경기","Recent matches")}</b><br>`+(PROF.hist.join("<br>")||LT("아직 경기 기록이 없어요","No matches yet"))],
+  train:()=>{ const cost=(PROF.train+1)*2000; return [tr("훈련 센터"),LT(`훈련 단계: <b>${PROF.train}/10</b><br>단계마다 내 팀 능력치 +1`,`Training level: <b>${PROF.train}/10</b><br>Each level gives your team +1 rating`)
+     +`<br><br>`+(PROF.train>=10?LT("최대 단계예요!","Max level!"):sBtn(LT(`훈련하기 (${cost.toLocaleString()} BP)`,`Train (${cost.toLocaleString()} BP)`),`act(()=>{ if(spend(${cost})) PROF.train++; })`))]; },
+  reg:()=>[tr("선수 등록"),LT("대표 선수를 고르세요. 상위 5명 평균 OVR이 높을수록 팀이 강해져요.<br>","Pick your featured player. Your top 5 players' OVR makes the team stronger.<br>")
+     +(PROF.squad.length?PROF.squad.map((p,i)=>`<div ${rowS}>${card(p)} ${i===PROF.fav?"⭐":sBtn(LT("대표 선수","Feature"),`act(()=>PROF.fav=${i})`)}</div>`).join(""):LT("보유 선수가 없어요. 상점이나 이적시장에서 영입하세요.","No players yet. Get some from the Shop or Transfer Market."))],
+  chal:()=>[tr("도전 과제"),ACH.map(a=>{ const c=Math.min(a.need,a.cur()), done=c>=a.need, got=PROF.claimed[a.k];
+     return `<div ${rowS}><span>${LT(a.ko,a.en)}<br><small style="opacity:.7">${c}/${a.need} · ${a.rew.toLocaleString()} BP</small></span>${got?"✅":sBtn(LT("받기","Claim"),`act(()=>{PROF.claimed['${a.k}']=1;PROF.coins+=${a.rew};})`,!done)}</div>`; }).join("")],
+  locker:()=>{ const kits=[["기본","Default",null],["블랙","Black",[0x111111,0xffd54a]],["화이트","White",[0xf4f4f4,0x1a2a6c]],["네온","Neon",[0x19e68c,0x111111]],["로얄","Royal",[0x3a2a9a,0xffd54a]],["핑크","Pink",[0xff5ca8,0xffffff]]];
+     return [tr("라커룸"),LT("유니폼을 고르세요 (다음 경기부터 적용)","Pick a kit (applies next match)")+kits.map(k=>{ const on=JSON.stringify(PROF.kit)===JSON.stringify(k[2]);
+       const sw=k[2]?`<span style="display:inline-block;width:18px;height:18px;border-radius:3px;background:#${k[2][0].toString(16).padStart(6,"0")};border:3px solid #${k[2][1].toString(16).padStart(6,"0")}"></span>`:"";
+       return `<div ${rowS}><span>${sw} ${LT(k[0],k[1])}</span>${on?"✅":sBtn(LT("입기","Wear"),`act(()=>PROF.kit=${JSON.stringify(k[2])})`)}</div>`; }).join("")]; },
+  transfer:()=>[tr("이적시장"),`BP: ${PROF.coins.toLocaleString()} `+sBtn(LT("🔄 새로고침","🔄 Refresh"),"rollMarket();openPanel('transfer')")+`<br><br><b>${LT("구매","Buy")}</b>`
+     +MARKET.map((p,i)=>`<div ${rowS}>${card(p)} ${p.sold?"✅":sBtn(`${p.price.toLocaleString()} BP`,`act(()=>{ const p=MARKET[${i}]; if(spend(p.price)){ p.sold=1; PROF.squad.push({n:p.n,o:p.o,p:p.p}); } })`)}</div>`).join("")
+     +`<br><b>${LT("판매","Sell")}</b>`+(PROF.squad.map((p,i)=>`<div ${rowS}>${card(p)} ${sBtn(`+${(Math.round((p.o-60)**2*6/100)*100).toLocaleString()} BP`,`act(()=>{ const p=PROF.squad.splice(${i},1)[0]; PROF.coins+=Math.round((p.o-60)**2*6/100)*100; if(PROF.fav===${i})PROF.fav=-1; else if(PROF.fav>${i})PROF.fav--; })`)}</div>`).join("")||LT("<br>판매할 선수가 없어요","<br>No players to sell"))],
+  watch:()=>[tr("관전"),LT("AI 팀끼리의 경기를 관전합니다. 보상은 없어요.","Watch two AI teams play. No rewards.")+`<br><br><label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="wh"')+`<label style="margin-top:8px">${tr("상대 팀")}</label>`+$("away").outerHTML.replace('id="away"','id="wa"')
+     +`<br><br><button class="go" onclick="startMatch(true)">${LT("관전 시작","Start watching")}</button>`],
+  item:()=>{ const it=[["drink","⚡ 스태미나 드링크","⚡ Stamina drink","다음 경기 스태미나 회복 2배","Double stamina recovery next match",1500],["charm","🍀 행운 부적","🍀 Lucky charm","다음 경기 BP 보상 2배","Double BP reward next match",2000]];
+     return [tr("아이템"),`BP: ${PROF.coins.toLocaleString()}`+it.map(([k,ko,en,dk,de,c])=>`<div ${rowS}><span>${LT(ko,en)} ×${PROF.items[k]}<br><small style="opacity:.7">${LT(dk,de)}</small></span><span>${sBtn(`${c} BP`,`act(()=>{ if(spend(${c})) PROF.items.${k}++; })`)} ${sBtn(PROF.use[k]?LT("사용 중","On"):LT("사용","Use"),`act(()=>{ PROF.use.${k}=!PROF.use.${k}&&PROF.items.${k}>0; })`,!PROF.items[k]&&!PROF.use[k])}</span></div>`).join("")]; },
+});
+PAIRS.push(["클럽하우스","Clubhouse"],["관전 시작","Start watching"]);
+function openPanel(k){ curPanel=k; const f=PANELS[k]; if(!f){ toast("준비 중입니다"); return; } const [t,b]=f(); $("ptitle").textContent=t; $("pbody").innerHTML=b; $("panel").classList.remove("hidden");
   for(const id of ["home","form","tactic"]){ const e=$(id+"2"); if(e){ e.value=$(id).value; e.onchange=()=>{$(id).value=e.value; refreshLobby();}; } }
-  const by=$("buy"); if(by) by.onclick=()=>{ if(PROF.coins<3000){toast("BP가 부족합니다");return;} PROF.coins-=3000; saveProf(); const ovr=75+Math.floor(Math.random()**2*30);
-    $("pack").innerHTML=`🎉 <b>${NAMES[Math.floor(Math.random()*NAMES.length)]}</b> OVR ${ovr}${ovr>=95?" ⭐ICON":""}`; refreshLobby(); };
+  const by=$("buy"); if(by) by.onclick=()=>{ if(!spend(3000)) return; const np=randPlayer(75,30); PROF.squad.push(np); PROF.packs++; saveProf();
+    $("pack").innerHTML=`🎉 ${card(np)}${np.o>=95?" ⭐ICON":""} — ${LT("선수 등록에 추가됨","added to your squad")}`; refreshLobby(); };
 }
 document.querySelectorAll("[data-p]").forEach(e=>e.onclick=()=>openPanel(e.dataset.p));
 $("pclose").onclick=()=>$("panel").classList.add("hidden");
@@ -633,7 +686,10 @@ const lobbyPl=makePlayerMesh(0xffffff,0xd8202a,10,false); lobbyPl.position.set(0
 const lobbyGk=makePlayerMesh(0,0,1,true); lobbyGk.position.set(HL-1,0,0); lobbyGk.rotation.y=Math.PI;
 refreshLobby(); applyLang();
 function cleanup(){ if(!G)return; for(const p of allPlayers()) scene.remove(p.mesh); }
-$("start").onclick=()=>{ cleanup(); $("menu").classList.add("hidden"); $("lobby").classList.add("hidden"); lobbyPl.visible=lobbyGk.visible=false; $("hud").classList.remove("hidden"); newGame(); whistle(1); msg("KICK OFF","",1.2); };
+function startMatch(spec){ if(spec){ G0spec={h:+$("wh").value,a:+$("wa").value}; $("panel").classList.add("hidden"); } else G0spec=null;
+  cleanup(); $("menu").classList.add("hidden"); $("lobby").classList.add("hidden"); lobbyPl.visible=lobbyGk.visible=false; $("hud").classList.remove("hidden"); newGame(); whistle(1); msg("KICK OFF","",1.2); }
+let G0spec=null;
+$("start").onclick=()=>startMatch(false);
 
 // ---------- HUD helpers ----------
 let msgT=0;
@@ -726,6 +782,7 @@ function steer(p,target,sprint,dt,mult=1){
 // ---------- update ----------
 function update(dt){
   if(!G||G.paused) return;
+  if(G.spectate) G.ctrl=null;
   if(msgT>0){ msgT-=dt; if(msgT<=0){$("msg").textContent="";$("sub").textContent="";} }
   if(G.state==="goal"||G.state==="halftime"){
     G.stateT-=dt; animatePlayers(dt); for(const p of allPlayers()){ p.pos.add(p.vel.clone().multiplyScalar(dt)); p.vel.multiplyScalar(.95);} physicsBall(dt);
@@ -779,7 +836,7 @@ function update(dt){
       p.vel.lerp(iv.multiplyScalar(sp),Math.min(1,dt*(ball.owner===p?7:9)));
       if(sprint&&p.vel.length()>1) p.stamina=Math.max(0,p.stamina-dt*.09);
     } else aiPlayer(p,dt);
-    p.stamina=Math.min(1,p.stamina+dt*.025);
+    p.stamina=Math.min(1,p.stamina+dt*(tm.drink?.05:.025));
     p.pos.add(p.vel.clone().multiplyScalar(dt)); clampPos(p.pos);
     if(p.vel.length()>.5) p.face.lerp(p.vel.clone().normalize(),Math.min(1,dt*10)).normalize();
   }
@@ -937,7 +994,7 @@ function updateHUD(){
   if(c){ $("pname").textContent=`#${c.num} ${c.name}`; $("stam").style.width=(c.stamina*100)+"%"; $("stam").style.background=c.stamina>.4?"#19e68c":"#ff5050"; }
   $("pow").style.width=(powerHold?Math.min(1,(performance.now()-powerHold.t)/900)*100:0)+"%";
   const [h,a]=G.teams, tp=h.possT+a.possT||1; $("poss").textContent=`${tr("점유율")} ${Math.round(h.possT/tp*100)}% - ${Math.round(a.possT/tp*100)}%`;
-  if(c){ marker.visible=ring.visible=true; marker.position.set(c.pos.x,2.3+Math.sin(performance.now()*.008)*.1,c.pos.z); ring.position.set(c.pos.x,.03,c.pos.z); }
+  if(c){ marker.visible=ring.visible=true; marker.position.set(c.pos.x,2.3+Math.sin(performance.now()*.008)*.1,c.pos.z); ring.position.set(c.pos.x,.03,c.pos.z); } else marker.visible=ring.visible=false;
   ballMesh.position.copy(ball.pos); ballShadow.position.set(ball.pos.x,.02,ball.pos.z); ballShadow.scale.setScalar(1/(1+ball.pos.y*.3));
   if(rain){ const a=rain.geometry.attributes.position; for(let i=0;i<a.count;i++){ let y=a.getY(i)-.8; if(y<0)y=40; a.setY(i,y);} a.needsUpdate=true; }
 }
