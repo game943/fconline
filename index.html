@@ -435,8 +435,8 @@ function doPass(p,dir,through,lob){
   else{ target=t.pos.clone(); const lead=through?9:1.5; target.add(t.vel.clone().setY(0).multiplyScalar(.3)).add(V(p.team.dir*lead,0)); }
   const v=target.clone().sub(p.pos).setY(0), dist=v.length();
   p.team.passes++; G.pendingPass={team:p.team,t:2.5};
-  if(lob){ const pw=Math.min(28,dist*.62+4); kick(p,v,pw,Math.min(14,dist*.32+3)); }
-  else{ const pw=Math.min(26,dist*.9+6); kick(p,v,pw,through?.5:0.2); }
+  if(lob){ const pw=Math.min(32,dist*.7+6); kick(p,v,pw,Math.min(14,dist*.32+3)); }
+  else{ const pw=Math.min(36,dist*1.1+(p.team.human?14:10)); kick(p,v,pw,through?.5:0.2); }
   if(t&&p.team.human) G.passTarget=t;
 }
 function doShoot(p,power){
@@ -546,7 +546,7 @@ $("quit").onclick=()=>{ G.paused=false; $("pause").classList.add("hidden"); toMe
 $("again").onclick=toMenu;
 function toMenu(){ if(G&&G.state==="end") reward(); cleanup(); $("end").classList.add("hidden"); $("hud").classList.add("hidden"); $("menu").classList.add("hidden"); $("lobby").classList.remove("hidden"); lobbyPl.visible=true; G=null; refreshLobby(); }
 // ---------- lobby ----------
-const VERSION="1.5";
+const VERSION="1.6";
 // ---------- language ----------
 let LANG="ko"; try{ LANG=localStorage.getItem("fc3d_lang")||"ko"; }catch(e){}
 const PAIRS=[ // [Korean, English]
@@ -603,7 +603,7 @@ const PANELS={
   team:()=>[tr("팀 관리"),`<label>${tr("내 팀")}</label>`+$("home").outerHTML.replace('id="home"','id="home2"')],
   tactic:()=>[tr("팀 전술"),`<label>${tr("포메이션")}</label>`+$("form").outerHTML.replace('id="form"','id="form2"')+`<br><br><label>${tr("전술")}</label>`+$("tactic").outerHTML.replace('id="tactic"','id="tactic2"')],
   guide:()=>[tr("게임 가이드"),document.querySelector(".keys").innerHTML],
-  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
+  update:()=>[LT("업데이트","Update"),LT(`현재 버전: <b>v${VERSION}</b><br><br><b>패치 노트</b><br>• v1.6 패스가 더 세고 빠르게<br>• v1.5 언어 선택 (한국어 / English)<br>• v1.4 패스 S · 슛 D, 이동은 방향키, 패스가 누르는 방향의 선수에게 감<br>• v1.3 쉬운 조작, 자동 선수 전환·자동 태클, 모바일 터치 버튼<br>• v1.2 업데이트 버튼 추가<br>• v1.1 로비 메인화면, 보상·상점 추가<br>• v1.0 11 vs 11 3D 축구 출시`,`Current version: <b>v${VERSION}</b><br><br><b>Patch notes</b><br>• v1.6 Faster, stronger passes<br>• v1.5 Language select (Korean / English)<br>• v1.4 S pass · D shoot, arrows move, passes go in the pressed direction<br>• v1.3 Easier controls, auto switch & tackle, touch buttons<br>• v1.2 Update button<br>• v1.1 Lobby main screen, rewards & shop<br>• v1.0 11 vs 11 3D football launch`)+`<br><br><button class="go" onclick="location.reload()">${LT("최신 버전으로 업데이트","Update to latest version")}</button>`],
   notice:()=>[tr("공지사항"),LT("• FC Online 3D 로비 업데이트!<br>• 경기 승리 시 BP·트로피·경험치 획득<br>• 날씨: 맑음 / 야간 / 비","• FC Online 3D lobby update!<br>• Earn BP, trophies and XP by winning<br>• Weather: day / night / rain")],
   shop:()=>[tr("상점"),`BP: ${PROF.coins.toLocaleString()}<br><br><button id="buy">${LT("선수팩 구매","Buy player pack")} (3,000 BP)</button><div id="pack" style="margin-top:10px"></div>`],
 };
@@ -778,7 +778,8 @@ function update(dt){
     for(const p of ap){ if(p.slide>0||p.stun>0) continue; const d=Math.hypot(ball.pos.x-p.pos.x,ball.pos.z-p.pos.z); if(d<bd){bd=d;best=p;} }
     if(best){
       const spd=ball.vel.length();
-      if(spd>22&&Math.random()<.5){ ball.vel.multiplyScalar(-.25); ball.vel.y=2; ball.free=.2; ball.lastTouchTeam=best.team; }
+      const passIn=G.pendingPass&&G.pendingPass.team===best.team;
+      if(spd>(passIn?40:24)&&Math.random()<.5){ ball.vel.multiplyScalar(-.25); ball.vel.y=2; ball.free=.2; ball.lastTouchTeam=best.team; }
       else{ if(G.pendingPass&&G.pendingPass.team===best.team){ best.team.passOk++; } G.pendingPass=null; ball.owner=best; ball.lastTouchTeam=best.team; ball.vel.set(0,0,0); if(best.team.human) G.ctrl=best; }
     }
   }
